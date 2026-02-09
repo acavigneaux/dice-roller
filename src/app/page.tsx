@@ -41,7 +41,7 @@ export default function Home() {
           onClick={roll}
           className="mt-2 inline-flex h-11 items-center justify-center rounded-full bg-emerald-500 px-7 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/40 transition hover:bg-emerald-400 hover:shadow-emerald-400/40 active:scale-[0.98]"
         >
-          Roll Dice
+          Lance le dé
         </button>
       </main>
     </div>
