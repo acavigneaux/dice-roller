@@ -1,8 +1,8 @@
 "use client";
 
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Stage } from "@react-three/drei";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 
 const faces = [1, 2, 3, 4, 5, 6] as const;
 type Face = (typeof faces)[number];
@@ -13,7 +13,7 @@ type DiceProps = {
 };
 
 function faceToRotation(face: Face): [number, number, number] {
-  // Mapping faces to rotations so que la bonne face soit vers le haut
+  // Mapping faces to rotations pour que la bonne face soit vers le haut
   switch (face) {
     case 1:
       return [0, 0, 0];
@@ -31,20 +31,40 @@ function faceToRotation(face: Face): [number, number, number] {
 }
 
 function Dice({ targetFace, rolling }: DiceProps) {
-  const rotation = useMemo(() => {
-    if (!targetFace) return [0.5, 0.8, 0.2] as [number, number, number];
-    const [rx, ry, rz] = faceToRotation(targetFace);
-    if (!rolling) return [rx, ry, rz] as [number, number, number];
-    // Ajouter un peu de rotation supplémentaire pendant le roll
-    return [rx + Math.PI * 2, ry + Math.PI * 2, rz + Math.PI * 2] as [
-      number,
-      number,
-      number
-    ];
-  }, [targetFace, rolling]);
+  const meshRef = useRef<THREE.Mesh>(null!);
+  const baseRotation = useMemo<[number, number, number]>(
+    () => (targetFace ? faceToRotation(targetFace) : [0.5, 0.8, 0.2]),
+    [targetFace]
+  );
+
+  useEffect(() => {
+    // Quand on a une face cible et qu'on ne roule pas, on la force
+    if (meshRef.current && !rolling && targetFace) {
+      const [rx, ry, rz] = faceToRotation(targetFace);
+      meshRef.current.rotation.set(rx, ry, rz);
+    }
+  }, [rolling, targetFace]);
+
+  useFrame((_, delta) => {
+    if (!meshRef.current) return;
+
+    if (rolling) {
+      // Pendant le lancer: rotation continue aléatoire
+      meshRef.current.rotation.x += 8 * delta;
+      meshRef.current.rotation.y += 10 * delta;
+      meshRef.current.rotation.z += 6 * delta;
+    } else if (targetFace) {
+      // Hors lancer: on interpole doucement vers la rotation cible
+      const [tx, ty, tz] = faceToRotation(targetFace);
+      const lerp = (a: number, b: number) => a + (b - a) * Math.min(10 * delta, 1);
+      meshRef.current.rotation.x = lerp(meshRef.current.rotation.x, tx);
+      meshRef.current.rotation.y = lerp(meshRef.current.rotation.y, ty);
+      meshRef.current.rotation.z = lerp(meshRef.current.rotation.z, tz);
+    }
+  });
 
   return (
-    <mesh rotation={rotation} castShadow receiveShadow>
+    <mesh ref={meshRef} rotation={baseRotation} castShadow receiveShadow>
       <boxGeometry args={[1, 1, 1]} />
       <meshStandardMaterial color="#e5e7eb" />
     </mesh>
@@ -127,7 +147,14 @@ export default function Home() {
                 <Dice targetFace={1} rolling={false} />
               ) : (
                 values.map((v, idx) => (
-                  <group key={`${v}-${idx}`} position={[idx * 1.4 - (diceCount - 1) * 0.7, 0, 0]}>
+                  <group
+                    key={`${v}-${idx}`}
+                    position={[
+                      idx * 1.4 - (diceCount - 1) * 0.7,
+                      0,
+                      0,
+                    ]}
+                  >
                     <Dice targetFace={v} rolling={rolling} />
                   </group>
                 ))
