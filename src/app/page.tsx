@@ -2,7 +2,7 @@
 
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Stage, Html } from "@react-three/drei";
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const faces = [1, 2, 3, 4, 5, 6] as const;
 type Face = (typeof faces)[number];
@@ -13,8 +13,7 @@ type DiceProps = {
 };
 
 function faceToRotation(face: Face): [number, number, number] {
-  // Orientation simple: on ne cherche pas à coller à la vraie numérotation de dé,
-  // juste à avoir une face "vers le haut" différente pour chaque valeur.
+  // Orientation simple: une face différente "vers le haut" pour chaque valeur.
   switch (face) {
     case 1:
       return [0, 0, 0];
@@ -32,12 +31,9 @@ function faceToRotation(face: Face): [number, number, number] {
 }
 
 function Dice({ targetFace, rolling }: DiceProps) {
-  const meshRef = useRef<THREE.Mesh>(null!);
-  const baseRotation = useMemo<[number, number, number]>(
-    () => (targetFace ? faceToRotation(targetFace) : [0.5, 0.8, 0.2]),
-    [targetFace]
-  );
+  const meshRef = useRef<any>(null);
 
+  // Quand on a une face cible et qu'on ne roule pas, on force la rotation cible
   useEffect(() => {
     if (meshRef.current && !rolling && targetFace) {
       const [rx, ry, rz] = faceToRotation(targetFace);
@@ -66,7 +62,7 @@ function Dice({ targetFace, rolling }: DiceProps) {
 
   return (
     <group>
-      <mesh ref={meshRef} rotation={baseRotation} castShadow receiveShadow>
+      <mesh ref={meshRef} castShadow receiveShadow>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial color="#e5e7eb" />
       </mesh>
