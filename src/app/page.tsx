@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Stage } from "@react-three/drei";
+import { OrbitControls, Stage, Html } from "@react-three/drei";
 import { useState, useMemo, useRef, useEffect } from "react";
 
 const faces = [1, 2, 3, 4, 5, 6] as const;
@@ -13,7 +13,8 @@ type DiceProps = {
 };
 
 function faceToRotation(face: Face): [number, number, number] {
-  // Mapping faces to rotations pour que la bonne face soit vers le haut
+  // Orientation simple: on ne cherche pas à coller à la vraie numérotation de dé,
+  // juste à avoir une face "vers le haut" différente pour chaque valeur.
   switch (face) {
     case 1:
       return [0, 0, 0];
@@ -38,7 +39,6 @@ function Dice({ targetFace, rolling }: DiceProps) {
   );
 
   useEffect(() => {
-    // Quand on a une face cible et qu'on ne roule pas, on la force
     if (meshRef.current && !rolling && targetFace) {
       const [rx, ry, rz] = faceToRotation(targetFace);
       meshRef.current.rotation.set(rx, ry, rz);
@@ -49,14 +49,15 @@ function Dice({ targetFace, rolling }: DiceProps) {
     if (!meshRef.current) return;
 
     if (rolling) {
-      // Pendant le lancer: rotation continue aléatoire
-      meshRef.current.rotation.x += 8 * delta;
-      meshRef.current.rotation.y += 10 * delta;
-      meshRef.current.rotation.z += 6 * delta;
+      // Pendant le lancer: rotation bien visible
+      meshRef.current.rotation.x += 18 * delta;
+      meshRef.current.rotation.y += 22 * delta;
+      meshRef.current.rotation.z += 14 * delta;
     } else if (targetFace) {
-      // Hors lancer: on interpole doucement vers la rotation cible
+      // Hors lancer: on interpole vers la rotation cible
       const [tx, ty, tz] = faceToRotation(targetFace);
-      const lerp = (a: number, b: number) => a + (b - a) * Math.min(10 * delta, 1);
+      const lerp = (a: number, b: number) =>
+        a + (b - a) * Math.min(8 * delta, 1);
       meshRef.current.rotation.x = lerp(meshRef.current.rotation.x, tx);
       meshRef.current.rotation.y = lerp(meshRef.current.rotation.y, ty);
       meshRef.current.rotation.z = lerp(meshRef.current.rotation.z, tz);
@@ -64,10 +65,20 @@ function Dice({ targetFace, rolling }: DiceProps) {
   });
 
   return (
-    <mesh ref={meshRef} rotation={baseRotation} castShadow receiveShadow>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color="#e5e7eb" />
-    </mesh>
+    <group>
+      <mesh ref={meshRef} rotation={baseRotation} castShadow receiveShadow>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial color="#e5e7eb" />
+      </mesh>
+      {/* Label 2D centré sur le dé pour afficher la valeur */}
+      {targetFace && !rolling && (
+        <Html center distanceFactor={8} style={{ pointerEvents: "none" }}>
+          <div className="rounded-full bg-slate-900/80 px-2 py-1 text-xs font-semibold text-slate-50 ring-1 ring-slate-700/80">
+            {targetFace}
+          </div>
+        </Html>
+      )}
+    </group>
   );
 }
 
@@ -94,14 +105,14 @@ export default function Home() {
     // durée de l'animation avant stabilisation
     setTimeout(() => {
       setRolling(false);
-    }, 900);
+    }, 1000);
   };
 
   const total = values.reduce((sum, v) => sum + v, 0);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 font-sans">
-      <main className="flex w-full max-w-3xl flex-col items-center gap-8 rounded-2xl bg-slate-900/80 px-8 py-10 text-slate-50 shadow-xl ring-1 ring-slate-800/70">
+      <main className="flex w-full max-w-4xl flex-col items-center gap-8 rounded-2xl bg-slate-900/80 px-8 py-10 text-slate-50 shadow-xl ring-1 ring-slate-800/70">
         <h1 className="text-3xl font-semibold tracking-tight">dice-roller 3D</h1>
 
         <p className="text-sm text-slate-400 text-center">
@@ -126,19 +137,19 @@ export default function Home() {
         </div>
 
         {/* Scène 3D */}
-        <div className="h-64 w-full rounded-2xl bg-slate-950/60">
-          <Canvas shadows camera={{ position: [3, 4, 5], fov: 40 }}>
+        <div className="h-80 w-full rounded-2xl bg-slate-950/60">
+          <Canvas shadows camera={{ position: [0, 4, 10], fov: 40 }}>
             <color attach="background" args={["#020617"]} />
-            <ambientLight intensity={0.4} />
+            <ambientLight intensity={0.5} />
             <directionalLight
               castShadow
-              position={[4, 8, 6]}
-              intensity={1}
+              position={[6, 10, 6]}
+              intensity={1.2}
               shadow-mapSize-width={2048}
               shadow-mapSize-height={2048}
             />
             <Stage
-              adjustCamera
+              adjustCamera={false}
               intensity={0.6}
               environment="city"
               shadows="contact"
@@ -150,7 +161,7 @@ export default function Home() {
                   <group
                     key={`${v}-${idx}`}
                     position={[
-                      idx * 1.4 - (diceCount - 1) * 0.7,
+                      idx * 1.6 - (diceCount - 1) * 0.8,
                       0,
                       0,
                     ]}
